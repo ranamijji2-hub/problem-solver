@@ -61,6 +61,7 @@ export function AudioCompressorTool() {
     const results: AudioItem[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      if (!file) continue;
       try {
         const blob = await compressAudio(file, {
           kbps: Number(bitrate),
