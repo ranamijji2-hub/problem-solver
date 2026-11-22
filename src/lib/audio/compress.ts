@@ -33,7 +33,7 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 function toInt16(samples: Float32Array): Int16Array {
   const out = new Int16Array(samples.length);
   for (let i = 0; i < samples.length; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
+    const s = Math.max(-1, Math.min(1, samples[i] ?? 0));
     out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
   }
   return out;
