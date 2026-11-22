@@ -1,0 +1,48 @@
+import type { ToolDefinition } from "./types";
+
+export const aiTools: ToolDefinition[] = [
+  {
+    slug: "text-summarizer",
+    category: "ai-tools",
+    name: "Text Summarizer",
+    shortDescription: "Condense a long piece of text into a short summary.",
+    status: "placeholder",
+    keywords: ["text summarizer", "summarize text", "shorten text"],
+    problemPhrases: ["summarize this article", "make this text shorter"],
+    runsClientSide: false,
+    relatedSlugs: ["ai-rewriter"],
+  },
+  {
+    slug: "ai-rewriter",
+    category: "ai-tools",
+    name: "AI Rewriter",
+    shortDescription: "Rewrite text in a different tone or style while keeping the meaning.",
+    status: "placeholder",
+    keywords: ["ai rewriter", "rewrite text", "paraphrase"],
+    problemPhrases: ["reword this paragraph", "make this sound more professional"],
+    runsClientSide: false,
+    relatedSlugs: ["text-summarizer", "email-writer"],
+  },
+  {
+    slug: "email-writer",
+    category: "ai-tools",
+    name: "Email Writer",
+    shortDescription: "Draft a clear, appropriately-toned email from a short description.",
+    status: "placeholder",
+    keywords: ["email writer", "write an email", "draft email"],
+    problemPhrases: ["help me write an email", "draft a follow-up email"],
+    runsClientSide: false,
+    relatedSlugs: ["ai-rewriter"],
+  },
+  {
+    slug: "cv-builder",
+    category: "ai-tools",
+    name: "CV Builder",
+    shortDescription: "Build a clean, professional CV from your work history and skills.",
+    status: "placeholder",
+    keywords: ["cv builder", "resume builder", "create a cv"],
+    problemPhrases: ["create a professional cv", "build my resume"],
+    runsClientSide: false,
+    relatedSlugs: ["email-writer"],
+  },
+];

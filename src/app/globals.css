@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Design tokens — see the design plan in the Phase 1 summary for the
+  rationale behind these choices (workbench palette: indigo + amber against
+  a warm paper background, avoiding the cream/terracotta and near-black/
+  neon defaults).
+
+  Colors are stored as "R G B" triples (no rgb() wrapper) so Tailwind's
+  `rgb(var(--x) / <alpha-value>)` pattern can apply opacity modifiers.
+*/
+
+:root {
+  --color-paper: 250 250 248; /* #FAFAF8 */
+  --color-ink: 20 23 31; /* #14171F */
+  --color-indigo: 43 58 103; /* #2B3A67 */
+  --color-amber: 232 163 61; /* #E8A33D */
+  --color-teal: 31 138 112; /* #1F8A70 */
+  --color-line: 227 224 214; /* #E3E0D6 */
+}
+
+.dark {
+  --color-paper: 17 19 26; /* #11131A */
+  --color-ink: 236 234 226; /* #ECEAE2 */
+  --color-indigo: 141 157 214; /* lighter indigo for contrast on dark */
+  --color-amber: 240 181 99; /* #F0B563 */
+  --color-teal: 87 191 163;
+  --color-line: 44 47 58; /* #2C2F3A */
+}
+
+@layer base {
+  * {
+    @apply border-line;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-paper text-ink font-body antialiased;
+    background-image:
+      radial-gradient(60rem 30rem at 85% -10%, rgb(var(--color-indigo) / 0.07), transparent 60%),
+      radial-gradient(50rem 28rem at -10% 0%, rgb(var(--color-amber) / 0.07), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3 {
+    @apply tracking-tight;
+  }
+
+  ::selection {
+    @apply bg-amber-200 text-ink;
+  }
+
+  /* Visible keyboard focus everywhere — accessibility floor from the brief. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--color-amber));
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

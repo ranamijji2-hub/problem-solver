@@ -1,0 +1,198 @@
+// ---------------------------------------------------------------------------
+// ProblemSolver — Prisma schema
+//
+// Phase 1 note: the ToolDefinition registry in src/lib/tools is the runtime
+// source of truth for what a tool *does* (its UI, its logic). This database
+// schema exists alongside it for what a tool *is doing in the product*:
+// admin-editable content (FAQs, related-tools overrides, descriptions) and
+// aggregate usage/search data that Phase 9–10 (Admin, Analytics) will read
+// and write. Keeping code-defined tool behavior separate from
+// database-editable content avoids needing a migration every time a new
+// tool is added, per the "modular architecture" requirement.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  icon        String? // lucide-react icon name
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tools Tool[]
+
+  @@index([sortOrder])
+  @@map("categories")
+}
+
+// Admin-editable metadata + content for a tool whose behavior lives in the
+// code-based ToolDefinition registry (see src/lib/tools/registry.ts).
+// The `slug` here MUST match a ToolDefinition.slug at runtime.
+model Tool {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  tagline     String?
+  description String? // long-form explanatory content (SEO body copy)
+  status      ToolStatus @default(DRAFT)
+  isIndexable Boolean    @default(true) // controls noindex for draft/internal tools
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  keywords String[] @default([]) // extra search keywords/synonyms beyond code defaults
+
+  faqs         Faq[]
+  relatedFrom  RelatedTool[] @relation("RelatedFrom")
+  relatedTo    RelatedTool[] @relation("RelatedTo")
+  usageDailies ToolUsageDaily[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // soft delete so historical analytics stay valid
+
+  @@index([categoryId])
+  @@index([status])
+  @@map("tools")
+}
+
+enum ToolStatus {
+  DRAFT
+  PUBLISHED
+  DEPRECATED
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  toolId    String
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([toolId, sortOrder])
+  @@map("faqs")
+}
+
+// Explicit admin-curated "related tools" overrides. When absent, the app
+// falls back to same-category tools computed at request time.
+model RelatedTool {
+  id           String @id @default(cuid())
+  toolId       String
+  tool         Tool   @relation("RelatedFrom", fields: [toolId], references: [id], onDelete: Cascade)
+  relatedToolId String
+  relatedTool  Tool   @relation("RelatedTo", fields: [relatedToolId], references: [id], onDelete: Cascade)
+  sortOrder    Int    @default(0)
+
+  @@unique([toolId, relatedToolId])
+  @@index([toolId, sortOrder])
+  @@map("related_tools")
+}
+
+// ---------------------------------------------------------------------------
+// Analytics
+//
+// Events are written from the API route in src/app/api/analytics and are
+// intentionally free of personal data: no IP storage, no user accounts, no
+// cookies. sessionHash is a short-lived, non-reversible per-browser-session
+// value (not tied to identity) used only to de-duplicate a single session's
+// events for the daily rollups below.
+// ---------------------------------------------------------------------------
+
+model AnalyticsEvent {
+  id          String    @id @default(cuid())
+  eventType   EventType
+  toolSlug    String? // null for site-wide events like search_no_match
+  searchQuery String? // present for search_query / search_no_match / search_result_click
+  metadata    Json? // small, structured, non-personal extra context
+  sessionHash String? // non-reversible per-session token, not an identity
+  createdAt   DateTime  @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([toolSlug, createdAt])
+  @@map("analytics_events")
+}
+
+enum EventType {
+  TOOL_VIEW
+  TOOL_START
+  TOOL_COMPLETE
+  TOOL_ERROR
+  SEARCH_QUERY
+  SEARCH_RESULT_CLICK
+  SEARCH_NO_MATCH
+  DOWNLOAD
+}
+
+// Pre-aggregated per-tool/per-day counters, populated by a scheduled job in
+// the Analytics phase. Keeping this separate from the raw event log keeps
+// the admin dashboard's usage-statistics queries fast without scanning
+// every raw event.
+model ToolUsageDaily {
+  id        String   @id @default(cuid())
+  toolId    String
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  views     Int      @default(0)
+  starts    Int      @default(0)
+  completes Int      @default(0)
+  errors    Int      @default(0)
+  downloads Int      @default(0)
+
+  @@unique([toolId, date])
+  @@index([date])
+  @@map("tool_usage_daily")
+}
+
+// Rollup of search terms that returned no good match — the primary input
+// for "what tools should we build next" (Phase 14).
+model SearchInsight {
+  id            String   @id @default(cuid())
+  normalizedQuery String
+  date          DateTime @db.Date
+  occurrences   Int      @default(1)
+  hadMatch      Boolean  @default(false)
+
+  @@unique([normalizedQuery, date])
+  @@index([date])
+  @@map("search_insights")
+}
+
+// ---------------------------------------------------------------------------
+// Admin
+// ---------------------------------------------------------------------------
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         AdminRole @default(EDITOR)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastLoginAt  DateTime?
+
+  @@map("admin_users")
+}
+
+enum AdminRole {
+  EDITOR
+  ADMIN
+}
